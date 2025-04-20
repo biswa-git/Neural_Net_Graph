@@ -1,4 +1,4 @@
-#include<Activation.hpp>
+#include<activation.hpp>
 #include<cmath>
 /*
 Eigen::VectorXd SigmoidActivation::activate(const Eigen::VectorXd& input) const
@@ -72,46 +72,95 @@ Eigen::VectorXd SoftmaxActivation::derivative(const Eigen::VectorXd& input) cons
 }
 */
 
-activation::activation()
+activation::activation::activation()
 {
 }
 
-activation::~activation()
+activation::activation::~activation()
 {
 }
 
-linear_activation::linear_activation()
+//--------------------------------------------------------------------------------------
+//Linear activation
+activation::linear::linear()
 {
 }
 
-linear_activation::~linear_activation()
+activation::linear::~linear()
 {
 }
 
-Eigen::VectorXd linear_activation::calculate(const Eigen::VectorXd& input)
+Eigen::VectorXd activation::linear::activate(const Eigen::VectorXd& input)
 {
 	return input;
 }
 
-Eigen::VectorXd linear_activation::calculate_derivative(const Eigen::VectorXd& input)
+Eigen::VectorXd activation::linear::derivative(const Eigen::VectorXd& input)
 {
     return Eigen::VectorXd::Ones(input.size());
 }
 
-ReLU_activation::ReLU_activation()
+//--------------------------------------------------------------------------------------
+
+//Relu activation
+activation::ReLU::ReLU()
 {
 }
 
-ReLU_activation::~ReLU_activation()
+activation::ReLU::~ReLU()
 {
 }
 
-Eigen::VectorXd ReLU_activation::calculate(const Eigen::VectorXd& input)
+Eigen::VectorXd activation::ReLU::activate(const Eigen::VectorXd& input)
 {
     return input.cwiseMax(0.0);
 }
 
-Eigen::VectorXd ReLU_activation::calculate_derivative(const Eigen::VectorXd& input)
+Eigen::VectorXd activation::ReLU::derivative(const Eigen::VectorXd& input)
 {
     return (input.array() > 0.0).select(Eigen::VectorXd::Ones(input.size()), 0.0);
 }
+
+//--------------------------------------------------------------------------------------
+// sigmoid activation
+activation::sigmoid::sigmoid()
+{
+}
+
+activation::sigmoid::~sigmoid()
+{
+}
+
+Eigen::VectorXd activation::sigmoid::activate(const Eigen::VectorXd& input)
+{
+    return 1.0 / (1.0 + (-input.array()).exp());
+}
+
+Eigen::VectorXd activation::sigmoid::derivative(const Eigen::VectorXd& input)
+{
+    Eigen::VectorXd activated = activate(input);
+    return activated.array() * (1.0 - activated.array());
+}
+//--------------------------------------------------------------------------------------
+// Swish activation
+activation::swish::swish()
+{
+}
+
+activation::swish::~swish()
+{
+}
+
+Eigen::VectorXd activation::swish::activate(const Eigen::VectorXd& input)
+{
+    Eigen::VectorXd sigmoid = 1.0 / (1.0 + (-input.array()).exp());
+    return input.array() * sigmoid.array();
+}
+
+Eigen::VectorXd activation::swish::derivative(const Eigen::VectorXd& input)
+{
+    Eigen::VectorXd sigmoid = 1.0 / (1.0 + (-input.array()).exp());
+    Eigen::VectorXd swish = input.array() * sigmoid.array();
+    return swish.array() + sigmoid.array() * (1.0 - swish.array());
+}
+//--------------------------------------------------------------------------------------

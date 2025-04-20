@@ -48,3 +48,17 @@ void layer::connect(layer* next_layer_pointer)
 		}
 	}
 }
+
+void layer::set_activation(activation::activation* activation_pointer)
+{
+	this->activation_pointer = activation_pointer;
+	for (auto& node_pointer : nodes)
+	{
+		node_pointer->set_activation(activation_pointer);
+	}
+}
+
+activation::activation* layer::get_activation() const
+{
+	return activation_pointer;
+}

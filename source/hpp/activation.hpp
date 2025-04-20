@@ -1,47 +1,74 @@
 #pragma once
 #include<Eigen/Core>
 
-
-enum ACTIVATION
+namespace activation
 {
-	LINEAR = 0,
-	RELU,
-	GELU
-};
+	enum ACTIVATION
+	{
+		LINEAR = 0,
+		RELU,
+		GELU,
+		SIGMOID,
+		SWISH
+	};
 
-class activation
-{
-public:
-	activation();
-	~activation();
-	virtual Eigen::VectorXd calculate(const Eigen::VectorXd&) = 0;
-	virtual Eigen::VectorXd calculate_derivative(const Eigen::VectorXd& input) = 0;
-private:
+	class activation
+	{
+	public:
+		activation();
+		virtual ~activation();
+		virtual Eigen::VectorXd activate(const Eigen::VectorXd&) = 0;
+		virtual Eigen::VectorXd derivative(const Eigen::VectorXd& input) = 0;
+	private:
 
-};
+	};
 
-class linear_activation : public activation
-{
-public:
-	linear_activation();
-	~linear_activation();
-	Eigen::VectorXd calculate(const Eigen::VectorXd&);
-	Eigen::VectorXd calculate_derivative(const Eigen::VectorXd& input);
+	class linear : public activation
+	{
+	public:
+		linear();
+		~linear();
+		Eigen::VectorXd activate(const Eigen::VectorXd&);
+		Eigen::VectorXd derivative(const Eigen::VectorXd& input);
 
-private:
+	private:
 
-};
+	};
 
+	class ReLU : public activation
+	{
+	public:
+		ReLU();
+		~ReLU();
+		Eigen::VectorXd activate(const Eigen::VectorXd&);
+		Eigen::VectorXd derivative(const Eigen::VectorXd& input);
 
+	private:
 
-class ReLU_activation : public activation
-{
-public:
-	ReLU_activation();
-	~ReLU_activation();
-	Eigen::VectorXd calculate(const Eigen::VectorXd&);
-	Eigen::VectorXd calculate_derivative(const Eigen::VectorXd& input);
+	};
 
-private:
+	class sigmoid : public activation
+	{
+	public:
+		sigmoid();
+		~sigmoid();
+		Eigen::VectorXd activate(const Eigen::VectorXd&);
+		Eigen::VectorXd derivative(const Eigen::VectorXd& input);
 
-};
+	private:
+
+	};
+
+	class swish : public activation
+	{
+	public:
+		swish();
+		~swish();
+		Eigen::VectorXd activate(const Eigen::VectorXd&);
+		Eigen::VectorXd derivative(const Eigen::VectorXd& input);
+
+	private:
+
+	};
+
+}
