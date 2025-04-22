@@ -34,7 +34,7 @@ const double& node::get_bias() const
 {
 	return bias;
 }
-
+/*
 void node::set_value(const Eigen::VectorXd& value)
 {
 	this->value = value;
@@ -44,7 +44,7 @@ const Eigen::VectorXd& node::get_value() const
 {
 	return value;
 }
-
+*/
 void node::set_activation_value(const Eigen::VectorXd& value)
 {
 	this->activation_value = value;

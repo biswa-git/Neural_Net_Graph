@@ -1,6 +1,9 @@
 #pragma once
 #include<layer.hpp>
 #include<error.hpp>
+#include<optimizer.hpp>
+
+class basic;
 
 class sequential
 {
@@ -22,7 +25,7 @@ private:
 	std::vector< Eigen::VectorXd> y;
 	int batch_size;
 	error::error* error;
-
+	basic* opt;
 
 	void initialize();
 	void forward_pass();

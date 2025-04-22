@@ -4,7 +4,8 @@
 #include <random>
 #include <numeric>
 
-sequential::sequential(const std::vector<std::vector<int>>& inputs) :batch_size(0), error(new error::mse())
+
+sequential::sequential(const std::vector<std::vector<int>>& inputs) :batch_size(0), error(new error::mse()), opt(new basic())
 {
 	for (auto& input : inputs)
 	{
@@ -122,7 +123,6 @@ void sequential::fit(const std::vector< Eigen::VectorXd>& x, const std::vector< 
 					this->y[i_input_dim][i_batch_size] = y[i_input_dim][indices[i_batch_size]];
 				}
 
-				input_layer_nodes[i_input_dim]->set_value(this->x[i_input_dim]);
 				input_layer_nodes[i_input_dim]->set_activation_value(this->x[i_input_dim]);
 			}
 
@@ -142,7 +142,7 @@ void sequential::fit(const std::vector< Eigen::VectorXd>& x, const std::vector< 
 			total_error += error->calculate(this->y[i], output_layer_nodes[i]->get_activation_value()).sum();
 		}
 
-		if (i_epoch%100 == 0)
+		if (i_epoch%1000 == 0)
 		{
 			std::cout << "error after " << i_epoch << " epoch  = " << total_error << std::endl;
 			std::cout << "--------------------------------------------------------" << std::endl;
@@ -172,7 +172,7 @@ void sequential::forward_pass()
 				sum += back_weight->get_value() * back_weight->get_back_node()->get_activation_value();
 			}
 
-			layer_node->set_value(sum);
+			//layer_node->set_value(sum);
 			layer_node->set_activation_value(layer_node->get_activation()->activate(sum));
 			layer_node->set_derivative_value(layer_node->get_activation()->derivative(sum));
 		}
@@ -190,7 +190,7 @@ void sequential::backpropagate()
 		auto layer_node = output_layer_nodes[i];
 		layer_node->set_chain(error->calculate_derivative(layer_node->get_activation_value(), y[i]).array() * layer_node->get_derivative_value().array());
 
-		layer_node->set_bias(layer_node->get_bias() - learning_rate * layer_node->get_chain().sum());
+		//layer_node->set_bias(layer_node->get_bias() - learning_rate * layer_node->get_chain().sum());
 	}
 
 	for (auto it = layers.rbegin() + 1; it != layers.rend(); it++)
@@ -206,19 +206,20 @@ void sequential::backpropagate()
 			{
 				node* front_node = front_weight->get_front_node();
 				layer_node->set_chain(layer_node->get_chain().array() + front_node->get_chain().array() * front_weight->get_value());
-				front_weight->set_value(front_weight->get_value() - learning_rate * (front_node->get_chain().array() * layer_node->get_value().array()).sum());
+				//front_weight->set_value(front_weight->get_value() - learning_rate * (front_node->get_chain().array() * layer_node->get_value().array()).sum());
 			    //dont update the weight. save the gradient
 			}
 			if (layer != *layers.begin())
 			{
-
 				layer_node->set_chain(layer_node->get_chain().array() * layer_node->get_derivative_value().array());
 
-				layer_node->set_bias(layer_node->get_bias() - learning_rate * layer_node->get_chain().sum());
+				//layer_node->set_bias(layer_node->get_bias() - learning_rate * layer_node->get_chain().sum());
 				//dont update the bias. save the gradient
 			}
 		}
 	}
+
+	opt->calculate(*this);
 }
 
 
@@ -230,7 +231,7 @@ void sequential::print_network() const {
 		std::cout << "Layer " << i + 1 << ":" << std::endl;
 		const auto& nodes = layers[i]->get_nodes();
 		for (size_t j = 0; j < nodes.size(); ++j) {
-			std::cout << "  Node " << j + 1 << " - Value: " << nodes[j]->get_value().transpose() << std::endl;
+			std::cout << "  Node " << j + 1 << " - Value: " << nodes[j]->get_activation_value().transpose() << std::endl;
 		}
 	}
 }
@@ -296,7 +297,7 @@ const std::vector<Eigen::VectorXd> sequential::predict(const std::vector<Eigen::
 				sum += back_weight->get_value() * back_weight->get_back_node()->get_activation_value();
 			}
 
-			layer_node->set_value(sum);
+			//layer_node->set_value(sum);
 			layer_node->set_activation_value(layer_node->get_activation()->activate(sum));
 		}
 	}

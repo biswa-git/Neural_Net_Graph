@@ -20,8 +20,8 @@ public:
     void set_bias(const double& bias);
     const double& get_bias() const;
 
-    void set_value(const Eigen::VectorXd& value);
-    const Eigen::VectorXd& get_value() const;
+    //void set_value(const Eigen::VectorXd& value);
+    //const Eigen::VectorXd& get_value() const;
 
     void set_activation_value(const Eigen::VectorXd& value);
     const Eigen::VectorXd& get_activation_value() const;
@@ -43,7 +43,7 @@ private:
     std::vector<weight*> back_weights;
     std::vector<weight*> front_weights;
     double bias;
-    Eigen::VectorXd value;
+    //Eigen::VectorXd value;
     Eigen::VectorXd activation_value;
     Eigen::VectorXd derivative_value;
     activation::activation* activation_pointer;
