@@ -1,62 +1,112 @@
 #include<sequential.hpp>
 #include<iostream>
 #include<fstream>
-#include <algorithm> // for std::shuffle
-#include <random>
 #include <vector>
-#include <numeric>
+#include <iomanip>
+#include <cmath>
+
+// Configuration constants
+constexpr int RANGE = 21;
+constexpr int EPOCHS = 8000;
+constexpr int BATCH_SIZE = 16;
+constexpr double DOMAIN_MIN = -5.0;
+constexpr double DOMAIN_MAX = 5.0;
+constexpr double GAUSSIAN_SIGMA = 2.0;
+constexpr double GAUSSIAN_AMPLITUDE = 5.0;
+constexpr const char* OUTPUT_FILE = "test3d.plt";
+
+double computeGaussian(double x, double y, double sigma, double amplitude)
+{
+	double exponent = -(x * x + y * y) / (2.0 * sigma * sigma);
+	return amplitude * std::exp(exponent);
+}
+
+void generateData(int range, double domain_min, double domain_max,
+	Eigen::VectorXd& x_1, Eigen::VectorXd& x_2, Eigen::VectorXd& y_1)
+{
+	int size = range * range;
+	x_1.resize(size);
+	x_2.resize(size);
+	y_1.resize(size);
+
+	for (size_t i = 0; i < range; i++)
+	{
+		for (size_t j = 0; j < range; j++)
+		{
+			double normalized_i = i / double(range - 1);
+			double normalized_j = j / double(range - 1);
+
+			x_1[i * range + j] = domain_min + (domain_max - domain_min) * normalized_i;
+			x_2[i * range + j] = domain_min + (domain_max - domain_min) * normalized_j;
+			y_1[i * range + j] = computeGaussian(x_1[i * range + j], x_2[i * range + j],
+				GAUSSIAN_SIGMA, GAUSSIAN_AMPLITUDE);
+		}
+	}
+}
+
 int main()
 {
-	int size = 100;
-	sequential model({ 
-		{1},
-		{3,activation::SWISH},
-		{3,activation::SWISH},
-		{5,activation::SWISH},
-		{5,activation::SWISH},
-		{3,activation::SWISH},
+	sequential model({
+		{2},
+		{8, activation::SWISH},
+		{12, activation::SWISH},
+		{8, activation::SWISH},
 		{1, activation::LINEAR},
-		});
+	});
 
-	Eigen::VectorXd x_1(size);
-	Eigen::VectorXd y_1(size);
-	for (size_t i = 0; i < size; i++)
-	{
-		x_1[i] = 20.0 * i / (size - 1) - 8.0;
-		y_1[i] = sin(x_1[i]/3) + 2*sin(x_1[i]/1.0);
-	}
+	// ============================================
+	// CHANGE OPTIMIZER HERE
+	// ============================================
+	// Option 1: Use Basic SGD
+	// model.set_optimizer_basic();
 
-	std::vector< Eigen::VectorXd> x, y;
-	x = { x_1 };
-	y = { y_1 };
+	// Option 2: Use Momentum optimizer
+	//model.set_optimizer_momentum(0.9);
 
-	model.fit(x, y, 40000, 10);
+	// Option 3: Use Adam optimizer (default, already set in constructor)
+	model.set_optimizer_adam(0.9, 0.999, 1e-8);
+	// ============================================
 
+	Eigen::VectorXd x_1, x_2, y_1;
+	generateData(RANGE, DOMAIN_MIN, DOMAIN_MAX, x_1, x_2, y_1);
+
+	std::vector<Eigen::VectorXd> x = {x_1, x_2};
+	std::vector<Eigen::VectorXd> y = {y_1};
+
+	model.fit(x, y, EPOCHS, BATCH_SIZE);
 	model.generate_graphviz("graph.dot");
 
+	// Generate prediction data
+	Eigen::VectorXd x_in_1, x_in_2;
+	generateData(RANGE, DOMAIN_MIN, DOMAIN_MAX, x_in_1, x_in_2, y_1);
 
-	int length = size;
+	std::vector<Eigen::VectorXd> x_in = {x_in_1, x_in_2};
+	auto y_out = model.predict(x_in);
 
-	Eigen::VectorXd x_in(length);
-	for (size_t i = 0; i < length; i++)
-	{
-		x_in[i] = 20.0 * i / (length - 1) - 8;
-		
+	// Write Tecplot output
+	std::ofstream fout(OUTPUT_FILE);
+	if (!fout) {
+		std::cerr << "Failed to open " << OUTPUT_FILE << " for writing.\n";
+		return 1;
 	}
 
-	std::vector< Eigen::VectorXd> x_in_;
-	x_in_ = { x_in };
-	auto y_out = model.predict(x_in_);
-	std::cout << "Input: " << x_in_[0].transpose() << std::endl;
-	std::cout << "Output: " << y_out[0].transpose() << std::endl;
-	std::ofstream plt_file("output_predict.plt");
-	plt_file << "TITLE = \"Output vs. Input\"\n";
-	plt_file << "VARIABLES = \"Input\", \"Output_original\", \"Output\"\n";
-	plt_file << "ZONE T=\"Output Data\", I=" << length << ", F=POINT\n";
-	for (size_t i = 0; i < length; i++)
-	{
-		plt_file << x_in[i] << " " << y_1[i] << " " << y_out[0][i] << "\n";
+	fout << "TITLE = \"Synthetic structured data\"\n";
+	fout << "VARIABLES = \"X\",\"Y\",\"Z\",\"V\"\n";
+	fout << "ZONE I=" << RANGE << ", J=" << RANGE << ", DATAPACKING=POINT\n";
+	fout << std::fixed << std::setprecision(8);
+
+	for (int j = 0; j < RANGE; ++j) {
+		double y_coord = DOMAIN_MIN + (DOMAIN_MAX - DOMAIN_MIN) * (j / double(RANGE - 1));
+		for (int i = 0; i < RANGE; ++i) {
+			double x_coord = DOMAIN_MIN + (DOMAIN_MAX - DOMAIN_MIN) * (i / double(RANGE - 1));
+			double z = computeGaussian(x_coord, y_coord, GAUSSIAN_SIGMA, GAUSSIAN_AMPLITUDE);
+			double V = z - y_out[0][i * RANGE + j];
+
+			fout << x_coord << " " << y_coord << " " << z << " " << V << "\n";
+		}
 	}
-	
+
+	fout.close();
+	std::cout << "Wrote Tecplot file: " << OUTPUT_FILE << " (" << RANGE << "x" << RANGE << " points)\n";
 	return 0;
 }

@@ -9,7 +9,9 @@ namespace activation
 		RELU,
 		GELU,
 		SIGMOID,
-		SWISH
+		SWISH,
+		TANH,
+		SOFTMAX
 	};
 
 	class activation
@@ -47,6 +49,18 @@ namespace activation
 
 	};
 
+	class GeLU : public activation
+	{
+	public:
+		GeLU();
+		~GeLU();
+		Eigen::VectorXd activate(const Eigen::VectorXd&);
+		Eigen::VectorXd derivative(const Eigen::VectorXd& input);
+
+	private:
+
+	};
+
 	class sigmoid : public activation
 	{
 	public:
@@ -71,4 +85,24 @@ namespace activation
 
 	};
 
+	class tanh_ : public activation
+	{
+	public:
+		tanh_();
+		~tanh_();
+		Eigen::VectorXd activate(const Eigen::VectorXd&);
+		Eigen::VectorXd derivative(const Eigen::VectorXd& input);
+	};
+
+	class softmax : public activation
+	{
+	public:
+		softmax();
+		~softmax();
+		Eigen::VectorXd activate(const Eigen::VectorXd&);
+		Eigen::VectorXd derivative(const Eigen::VectorXd& input);
+
+	private:
+
+	};
 }

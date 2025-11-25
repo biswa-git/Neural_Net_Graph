@@ -4,8 +4,8 @@
 #include <random>
 #include <numeric>
 
-
-sequential::sequential(const std::vector<std::vector<int>>& inputs) :batch_size(0), error(new error::mse()), opt(new basic())
+sequential::sequential(const std::vector<std::vector<int>>& inputs) 
+	:batch_size(0), error(new error::mse()), opt(new adam())  // Changed to cross_entropy
 {
 	for (auto& input : inputs)
 	{
@@ -23,11 +23,20 @@ sequential::sequential(const std::vector<std::vector<int>>& inputs) :batch_size(
 			case activation::RELU:
 				new_layer->set_activation(new activation::ReLU());
 				break;
+			case activation::GELU:
+				new_layer->set_activation(new activation::GeLU());
+				break;
 			case activation::SIGMOID:
 				new_layer->set_activation(new activation::sigmoid());
 				break;
 			case activation::SWISH:
 				new_layer->set_activation(new activation::swish());
+				break;
+			case activation::TANH:
+				new_layer->set_activation(new activation::tanh_());
+				break;
+			case activation::SOFTMAX:
+				new_layer->set_activation(new activation::softmax());
 				break;
 			default:
 				// invalid activation  
@@ -68,6 +77,42 @@ std::vector<layer*>& sequential::get_layers()
 	return layers;
 }
 
+void sequential::set_optimizer_basic()
+{
+	if (opt != nullptr) {
+		delete opt;
+	}
+	opt = new basic();
+}
+
+void sequential::set_optimizer_momentum(double beta)
+{
+	if (opt != nullptr) {
+		delete opt;
+	}
+	momentum* mom = new momentum();
+	mom->set_momentum_beta(beta);
+	opt = mom;
+}
+
+void sequential::set_optimizer_adam(double beta1, double beta2, double epsilon)
+{
+	if (opt != nullptr) {
+		delete opt;
+	}
+	adam* opt_adam = new adam();
+	opt_adam->set_beta1(beta1);
+	opt_adam->set_beta2(beta2);
+	opt_adam->set_epsilon(epsilon);
+	opt = opt_adam;
+}
+
+void sequential::set_learning_rate(double lr) {
+	if (opt != nullptr) {
+		opt->set_learning_rate(lr);
+	}
+}
+
 void sequential::fit(const std::vector< Eigen::VectorXd>& x, const std::vector< Eigen::VectorXd>& y, const int& epoch, const int& batch_size)
 {
 	// Let get the dimesion of input and output
@@ -78,10 +123,11 @@ void sequential::fit(const std::vector< Eigen::VectorXd>& x, const std::vector< 
 	auto& output_layer_nodes = (*output_layer)->get_nodes();
 
 	const auto input_dim = input_layer_nodes.size();
+	const auto output_dim = output_layer_nodes.size();
 
 	this->batch_size = batch_size;
 	this->x.resize(input_dim);
-	this->y.resize(output_layer_nodes.size());
+	this->y.resize(output_dim);
 
 	const auto sample_size = static_cast<int>(x[0].size());
 
@@ -106,8 +152,9 @@ void sequential::fit(const std::vector< Eigen::VectorXd>& x, const std::vector< 
 
 	for (size_t i_epoch = 0; i_epoch < epoch; i_epoch++)
 	{
+		this->opt->set_epoch_count(i_epoch);
+
 		std::shuffle(indices.begin(), indices.end(), g);
-		
 		for (auto& indices_start_end_pair : indices_start_end_pairs)
 		{
 			this->batch_size = indices_start_end_pair.second - indices_start_end_pair.first + 1;
@@ -115,15 +162,24 @@ void sequential::fit(const std::vector< Eigen::VectorXd>& x, const std::vector< 
 			for (size_t i_input_dim = 0; i_input_dim < input_dim; i_input_dim++)
 			{
 				this->x[i_input_dim].resize(this->batch_size);
-				this->y[i_input_dim].resize(this->batch_size);
-
+				
 				for (int i_batch_size = 0; i_batch_size < this->batch_size; ++i_batch_size)
 				{
-					this->x[i_input_dim][i_batch_size] = x[i_input_dim][indices[i_batch_size]];
-					this->y[i_input_dim][i_batch_size] = y[i_input_dim][indices[i_batch_size]];
+					this->x[i_input_dim][i_batch_size] = x[i_input_dim][indices[indices_start_end_pair.first + i_batch_size]];
 				}
 
 				input_layer_nodes[i_input_dim]->set_activation_value(this->x[i_input_dim]);
+			}
+
+			for (size_t i_output_dim = 0; i_output_dim < output_dim; i_output_dim++)
+			{
+				this->y[i_output_dim].resize(this->batch_size);
+
+				for (int i_batch_size = 0; i_batch_size < this->batch_size; ++i_batch_size)
+				{
+					this->y[i_output_dim][i_batch_size] = y[i_output_dim][indices[indices_start_end_pair.first + i_batch_size]];
+				}
+
 			}
 
 			forward_pass();
@@ -142,7 +198,7 @@ void sequential::fit(const std::vector< Eigen::VectorXd>& x, const std::vector< 
 			total_error += error->calculate(this->y[i], output_layer_nodes[i]->get_activation_value()).sum();
 		}
 
-		if (i_epoch%1000 == 0)
+		if (i_epoch%1 == 0)
 		{
 			std::cout << "error after " << i_epoch << " epoch  = " << total_error << std::endl;
 			std::cout << "--------------------------------------------------------" << std::endl;
@@ -181,7 +237,6 @@ void sequential::forward_pass()
 
 void sequential::backpropagate()
 {
-	double learning_rate = 1e-2;
 	auto& output_layer = layers.rbegin();
 	auto& output_layer_nodes = (*output_layer)->get_nodes();
 
@@ -206,23 +261,16 @@ void sequential::backpropagate()
 			{
 				node* front_node = front_weight->get_front_node();
 				layer_node->set_chain(layer_node->get_chain().array() + front_node->get_chain().array() * front_weight->get_value());
-				//front_weight->set_value(front_weight->get_value() - learning_rate * (front_node->get_chain().array() * layer_node->get_value().array()).sum());
-			    //dont update the weight. save the gradient
 			}
 			if (layer != *layers.begin())
 			{
 				layer_node->set_chain(layer_node->get_chain().array() * layer_node->get_derivative_value().array());
-
-				//layer_node->set_bias(layer_node->get_bias() - learning_rate * layer_node->get_chain().sum());
-				//dont update the bias. save the gradient
 			}
 		}
 	}
 
-	opt->calculate(*this);
+	this->opt->calculate(*this);
 }
-
-
 
 
 void sequential::print_network() const {
@@ -279,8 +327,6 @@ const std::vector<Eigen::VectorXd> sequential::predict(const std::vector<Eigen::
 	for (int i = 0; i < input_layer_nodes.size(); i++)
 	{
 		input_layer_nodes[i]->set_activation_value(x[i]);
-
-		std::cout << "Input: " << input_layer_nodes[i]->get_activation_value() << std::endl;
 	}
 	// Perform forward pass
 	for (auto it = layers.begin() + 1; it != layers.end(); it++)

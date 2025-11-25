@@ -3,13 +3,19 @@
 #include<error.hpp>
 #include<optimizer.hpp>
 
-class basic;
+class optimizer;
 
 class sequential
 {
 public:
 	sequential(const std::vector<std::vector<int>>&);
 	~sequential();
+
+	// Optimizer setters
+	void set_optimizer_basic();
+	void set_optimizer_momentum(double beta = 0.9);
+	void set_optimizer_adam(double beta1 = 0.9, double beta2 = 0.999, double epsilon = 1e-8);
+	void set_learning_rate(double lr);
 
 	//to be deleted
 	std::vector<layer*>& get_layers();
@@ -25,7 +31,7 @@ private:
 	std::vector< Eigen::VectorXd> y;
 	int batch_size;
 	error::error* error;
-	basic* opt;
+	optimizer* opt;
 
 	void initialize();
 	void forward_pass();

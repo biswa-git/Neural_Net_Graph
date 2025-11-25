@@ -32,22 +32,30 @@ public:
     void set_activation(activation::activation* activation_pointer);
     activation::activation* get_activation() const;
 
-    void set_delta(const Eigen::VectorXd& delta);
-    const Eigen::VectorXd& get_delta() const;
+    void set_delta(const double& delta);
+    const double& get_delta() const;
 
     void set_chain(const Eigen::VectorXd& chain);
     const Eigen::VectorXd& get_chain() const;
+
+	void set_first_momentum(const double& first_momentum);
+	double& get_first_momentum();
+
+	void set_second_momentum(const double& second_momentum);
+    double& get_second_momentum();
 
 private:
     int id;
     std::vector<weight*> back_weights;
     std::vector<weight*> front_weights;
     double bias;
+	double first_momentum;
+	double second_momentum;
     //Eigen::VectorXd value;
     Eigen::VectorXd activation_value;
     Eigen::VectorXd derivative_value;
     activation::activation* activation_pointer;
-    Eigen::VectorXd delta;
+    double delta;
     Eigen::VectorXd chain;
 
 };

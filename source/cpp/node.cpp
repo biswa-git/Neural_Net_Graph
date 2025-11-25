@@ -1,6 +1,6 @@
 #include<node.hpp>
 
-node::node() :id(count++), bias(0.0), activation_pointer(nullptr)
+node::node() :id(count++), bias(0.0), delta(0.0), first_momentum(0.0), second_momentum(0.0), activation_pointer(nullptr)
 {
 }
 
@@ -74,11 +74,11 @@ activation::activation* node::get_activation() const
 	return activation_pointer;
 }
 
-void node::set_delta(const Eigen::VectorXd& delta) {
+void node::set_delta(const double& delta) {
 	this->delta = delta;
 }
 
-const Eigen::VectorXd& node::get_delta() const {
+const double& node::get_delta() const {
 	return delta;
 }
 
@@ -90,4 +90,24 @@ void node::set_chain(const Eigen::VectorXd& chain)
 const Eigen::VectorXd& node::get_chain() const
 {
 	return chain;
+}
+
+void node::set_first_momentum(const double& first_momentum)
+{
+	this->first_momentum = first_momentum;
+}
+
+double& node::get_first_momentum()
+{
+	return first_momentum;
+}
+
+void node::set_second_momentum(const double& second_momentum)
+{
+	this->second_momentum = second_momentum;
+}
+
+double& node::get_second_momentum()
+{
+	return second_momentum;
 }
