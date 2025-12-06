@@ -5,9 +5,33 @@
 #include <iomanip>
 #include <cmath>
 
+int main()
+{
+	sequential model({
+		{3},
+		{3, activation::SOFTMAX},
+		});
+	model.set_optimizer_adam(0.9, 0.999, 1e-8);
+	model.set_learning_rate(0.0001);
+
+	std::vector<Eigen::VectorXd> x;
+	std::vector<Eigen::VectorXd> y;
+	Eigen::VectorXd x1(1), x2(1), x3(1);
+	Eigen::VectorXd y1(1), y2(1), y3(1);
+	x1 << 5.0;
+	x2 << 6.0;
+	x3 << -3.0;
+	x = { x1, x2, x3 };
+	y = { y1, y2, y3 };
+
+	model.fit(x, y, 5, 1);
+
+	return 0;
+}
+/*
 // Configuration constants
-constexpr int RANGE = 21;
-constexpr int EPOCHS = 8000;
+constexpr int RANGE = 51;
+constexpr int EPOCHS = 1600;
 constexpr int BATCH_SIZE = 16;
 constexpr double DOMAIN_MIN = -5.0;
 constexpr double DOMAIN_MAX = 5.0;
@@ -53,19 +77,8 @@ int main()
 		{8, activation::SWISH},
 		{1, activation::LINEAR},
 	});
-
-	// ============================================
-	// CHANGE OPTIMIZER HERE
-	// ============================================
-	// Option 1: Use Basic SGD
-	// model.set_optimizer_basic();
-
-	// Option 2: Use Momentum optimizer
-	//model.set_optimizer_momentum(0.9);
-
-	// Option 3: Use Adam optimizer (default, already set in constructor)
 	model.set_optimizer_adam(0.9, 0.999, 1e-8);
-	// ============================================
+	model.set_learning_rate(0.0001);
 
 	Eigen::VectorXd x_1, x_2, y_1;
 	generateData(RANGE, DOMAIN_MIN, DOMAIN_MAX, x_1, x_2, y_1);
@@ -110,3 +123,4 @@ int main()
 	std::cout << "Wrote Tecplot file: " << OUTPUT_FILE << " (" << RANGE << "x" << RANGE << " points)\n";
 	return 0;
 }
+*/

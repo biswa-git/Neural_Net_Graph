@@ -5,7 +5,7 @@
 #include <numeric>
 
 sequential::sequential(const std::vector<std::vector<int>>& inputs) 
-	:batch_size(0), error(new error::mse()), opt(new adam())  // Changed to cross_entropy
+	:batch_size(0), error(new error::cross_entropy()), opt(new adam())
 {
 	for (auto& input : inputs)
 	{
@@ -65,6 +65,31 @@ sequential::sequential(const std::vector<std::vector<int>>& inputs)
 			prev_layer->connect(layer);
 		}
 		prev_layer = layer;
+	}
+	
+	// Xavier (Glorot) initialization
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
+	for (size_t i = 1; i < layers.size(); i++)
+	{
+		auto& current_layer_nodes = layers[i]->get_nodes();
+		auto& prev_layer_nodes = layers[i - 1]->get_nodes();
+
+		int fan_in = prev_layer_nodes.size();
+		int fan_out = current_layer_nodes.size();
+		double limit = std::sqrt(6.0 / (fan_in + fan_out));
+
+		std::uniform_real_distribution<double> distribution(-limit, limit);
+
+		for (auto current_node : current_layer_nodes)
+		{
+			auto& back_weights = current_node->get_back_weights();
+			for (auto weight : back_weights)
+			{
+				weight->set_value(distribution(gen));
+			}
+		}
 	}
 }
 
@@ -198,7 +223,7 @@ void sequential::fit(const std::vector< Eigen::VectorXd>& x, const std::vector< 
 			total_error += error->calculate(this->y[i], output_layer_nodes[i]->get_activation_value()).sum();
 		}
 
-		if (i_epoch%1 == 0)
+		if (i_epoch%100 == 0)
 		{
 			std::cout << "error after " << i_epoch << " epoch  = " << total_error << std::endl;
 			std::cout << "--------------------------------------------------------" << std::endl;
@@ -233,6 +258,14 @@ void sequential::forward_pass()
 			layer_node->set_derivative_value(layer_node->get_activation()->derivative(sum));
 		}
 	}
+
+	auto& output_layer = layers.rbegin();
+	auto& output_layer_nodes = (*output_layer)->get_nodes();
+	for (int i = 0; i < output_layer_nodes.size(); i++)
+	{
+		auto layer_node = output_layer_nodes[i];
+		std::cout << "output value " << i << " : " << layer_node->get_activation_value().transpose() << std::endl;
+	}
 }
 
 void sequential::backpropagate()
@@ -244,8 +277,6 @@ void sequential::backpropagate()
 	{
 		auto layer_node = output_layer_nodes[i];
 		layer_node->set_chain(error->calculate_derivative(layer_node->get_activation_value(), y[i]).array() * layer_node->get_derivative_value().array());
-
-		//layer_node->set_bias(layer_node->get_bias() - learning_rate * layer_node->get_chain().sum());
 	}
 
 	for (auto it = layers.rbegin() + 1; it != layers.rend(); it++)

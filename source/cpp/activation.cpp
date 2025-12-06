@@ -188,16 +188,15 @@ activation::softmax::~softmax()
 }
 
 Eigen::VectorXd activation::softmax::activate(const Eigen::VectorXd& input)
-{
+{   
     double max_input = input.maxCoeff();
     Eigen::VectorXd exp_input = (input.array() - max_input).exp();
     double sum_exp = exp_input.sum();
+
     return exp_input.array() / sum_exp;
 }
 
 Eigen::VectorXd activation::softmax::derivative(const Eigen::VectorXd& input)
 {
-	// When using cross-entropy loss + softmax, return identity (1.0)
-	// because cross-entropy already accounts for softmax derivative
 	return Eigen::VectorXd::Ones(input.size());
 }

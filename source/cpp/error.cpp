@@ -1,4 +1,5 @@
 #include<error.hpp>
+#include<iostream>
 
 error::error::error()
 {
@@ -38,17 +39,12 @@ error::cross_entropy::~cross_entropy()
 
 Eigen::VectorXd error::cross_entropy::calculate(const Eigen::VectorXd& reference_value, const Eigen::VectorXd& value) const
 {
-	auto size = reference_value.size();
 	auto clamped_value = value.array().max(epsilon).min(1.0 - epsilon);
-	
-	return -(reference_value.array() * clamped_value.log()) / static_cast<double>(size);
+	return -(reference_value.array() * clamped_value.log());
 }
 
 Eigen::VectorXd error::cross_entropy::calculate_derivative(const Eigen::VectorXd& reference_value, const Eigen::VectorXd& value) const
 {
-	auto size = reference_value.size();
-	auto clamped_value = value.array().max(epsilon).min(1.0 - epsilon);
-	
-	return -(reference_value.array() / clamped_value) / static_cast<double>(size);
+	return (value - reference_value);
 }
 

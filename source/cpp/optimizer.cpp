@@ -71,7 +71,7 @@ void basic::calculate(sequential& model)
 
 momentum::momentum() : momentum_beta(0.9)
 {
-	// Momentum default learning rate (same as others for consistency)
+	// Momentum default learning rate
 	set_learning_rate(0.001);
 }
 
@@ -106,7 +106,7 @@ void momentum::calculate(sequential& model)
 			for (auto front_weight : layer_node->get_front_weights())
 			{
 				node* front_node = front_weight->get_front_node();
-				if (!front_node) continue;  // Safety check
+				if (!front_node) continue;
 
 				auto grad = (front_node->get_chain().array() * layer_node->get_activation_value().array()).sum();
 
@@ -130,7 +130,6 @@ void momentum::calculate(sequential& model)
 
 adam::adam() :beta1(0.9), beta2(0.999), epsilon(1e-8)
 {
-	// Adam default learning rate (0.001 is too low for MNIST, use 0.01 instead)
 	set_learning_rate(0.001);
 }
 
@@ -141,19 +140,16 @@ adam::~adam()
 
 void adam::set_beta1(double b)
 {
-	// Clamp beta1 between 0 and 1
 	this->beta1 = (b < 0.0) ? 0.0 : (b > 1.0) ? 1.0 : b;
 }
 
 void adam::set_beta2(double b)
 {
-	// Clamp beta2 between 0 and 1
 	this->beta2 = (b < 0.0) ? 0.0 : (b > 1.0) ? 1.0 : b;
 }
 
 void adam::set_epsilon(double e)
 {
-	// Ensure epsilon is positive
 	this->epsilon = (e > 0.0) ? e : 1e-8;
 }
 
@@ -192,18 +188,18 @@ void adam::calculate(sequential& model)
 			for (auto front_weight : layer_node->get_front_weights())
 			{
 				node* front_node = front_weight->get_front_node();
-				if (!front_node) continue;  // Safety check
+				if (!front_node) continue;
 
 				auto grad = (front_node->get_chain().array() * layer_node->get_activation_value().array()).sum();
 				front_weight->set_first_momentum(beta1 * front_weight->get_first_momentum() + (1.0 - beta1) * grad);
 				front_weight->set_second_momentum(beta2 * front_weight->get_second_momentum() + (1.0 - beta2) * grad * grad);
 				
-				// Bias correction with epsilon guard
+				// Bias correction
 				int epoch = get_epoch_count() + 1;
 				double bias_correction_1 = 1.0 - pow(beta1, epoch);
 				double bias_correction_2 = 1.0 - pow(beta2, epoch);
 				
-				// Add epsilon to prevent division by near-zero
+				// Add epsilon to prevent division by zero
 				bias_correction_1 = std::max(bias_correction_1, 1e-10);
 				bias_correction_2 = std::max(bias_correction_2, 1e-10);
 				
@@ -223,12 +219,10 @@ void adam::calculate(sequential& model)
 				layer_node->set_first_momentum(beta1 * layer_node->get_first_momentum() + (1.0 - beta1) * bias_grad);
 				layer_node->set_second_momentum(beta2 * layer_node->get_second_momentum() + (1.0 - beta2) * bias_grad * bias_grad);
 
-				// Bias correction with epsilon guard
 				int epoch = get_epoch_count() + 1;
 				double bias_correction_1 = 1.0 - pow(beta1, epoch);
 				double bias_correction_2 = 1.0 - pow(beta2, epoch);
 				
-				// Add epsilon to prevent division by near-zero
 				bias_correction_1 = std::max(bias_correction_1, 1e-10);
 				bias_correction_2 = std::max(bias_correction_2, 1e-10);
 
